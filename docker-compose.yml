@@ -1,0 +1,26 @@
+name: venture-pilot-control-plane
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pilot_dev_only}
+      POSTGRES_DB: ${POSTGRES_DB:-venture_pilot}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pilot_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pilot} -d ${POSTGRES_DB:-venture_pilot}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+# NOTE: api / worker / admin / participant-portal services are added in
+# Phase 11 once the corresponding apps exist. Until then, run them locally
+# with `pnpm dev` against this Postgres instance (see README.md).
+
+volumes:
+  pilot_postgres_data:

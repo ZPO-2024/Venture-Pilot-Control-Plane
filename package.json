@@ -1,0 +1,37 @@
+{
+  "name": "venture-pilot-control-plane",
+  "version": "0.1.0",
+  "private": true,
+  "description": "ZPO reusable customer-trial, demonstration, and pilot-management control plane",
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r --filter=./packages/** --filter=./apps/** build",
+    "dev": "pnpm --parallel -r --filter=./apps/** dev",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:security": "vitest run tests/security",
+    "test:scenarios": "vitest run tests/scenarios",
+    "test:e2e": "playwright test",
+    "db:generate": "pnpm --filter @venture-pilot/db generate",
+    "db:migrate": "pnpm --filter @venture-pilot/db migrate:dev",
+    "db:migrate:deploy": "pnpm --filter @venture-pilot/db migrate:deploy",
+    "db:seed": "pnpm --filter @venture-pilot/db seed",
+    "db:reset": "pnpm --filter @venture-pilot/db reset",
+    "test:db:up": "docker compose -f docker-compose.test.yml up -d --wait",
+    "test:db:down": "docker compose -f docker-compose.test.yml down -v",
+    "test:db:migrate": "dotenv -e .env.test -- pnpm --filter @venture-pilot/db migrate:deploy"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.48.2",
+    "@types/node": "22.9.0",
+    "dotenv-cli": "7.4.2",
+    "typescript": "5.6.3",
+    "vitest": "2.1.4"
+  },
+  "packageManager": "pnpm@9.12.3"
+}
