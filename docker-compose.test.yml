@@ -1,0 +1,23 @@
+name: venture-pilot-control-plane-test
+
+# Dedicated Postgres instance for `pnpm test`. Kept separate from
+# docker-compose.yml's dev database so test runs can freely reset/truncate
+# without touching anything you're looking at in the admin cockpit.
+
+services:
+  postgres-test:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-pilot}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pilot_test_only}
+      POSTGRES_DB: ${POSTGRES_DB:-venture_pilot_test}
+    ports:
+      - "${POSTGRES_PORT:-55432}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-pilot} -d ${POSTGRES_DB:-venture_pilot_test}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20

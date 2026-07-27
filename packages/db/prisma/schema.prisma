@@ -1,0 +1,614 @@
+// Venture Pilot Control Plane — data model
+// See docs/DATA_MODEL.md for a narrative walkthrough of these groups.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =====================================================================
+// Group A — Product catalog
+// =====================================================================
+
+model Product {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  versions         ProductVersion[]
+  environmentTypes ProductEnvironmentType[]
+  datasets         DemoDataset[]
+  pilotPrograms    PilotProgram[]
+  accessGrants     AccessGrant[]
+  auditEvents      AuditEvent[]
+
+  @@map("products")
+}
+
+model ProductVersion {
+  id           String   @id @default(cuid())
+  productId    String
+  version      String
+  adapterKey   String
+  releaseNotes String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  product       Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  features      ProductFeature[]
+  healthChecks  ProductHealthCheck[]
+  pilotPrograms PilotProgram[]
+  accessGrants  AccessGrant[]
+
+  @@unique([productId, version])
+  @@map("product_versions")
+}
+
+model ProductEnvironmentType {
+  id          String  @id @default(cuid())
+  productId   String
+  key         String
+  label       String
+  description String?
+
+  product      Product            @relation(fields: [productId], references: [id], onDelete: Cascade)
+  environments PilotEnvironment[]
+
+  @@unique([productId, key])
+  @@map("product_environment_types")
+}
+
+model ProductFeature {
+  id               String  @id @default(cuid())
+  productVersionId String
+  key              String
+  label            String
+  description      String?
+  defaultEnabled   Boolean @default(false)
+
+  productVersion ProductVersion     @relation(fields: [productVersionId], references: [id], onDelete: Cascade)
+  entitlements   PilotEntitlement[]
+
+  @@unique([productVersionId, key])
+  @@map("product_features")
+}
+
+model ProductHealthCheck {
+  id                      String @id @default(cuid())
+  productVersionId        String
+  key                     String
+  label                   String
+  expectedIntervalSeconds Int    @default(300)
+
+  productVersion ProductVersion @relation(fields: [productVersionId], references: [id], onDelete: Cascade)
+  healthEvents   HealthEvent[]
+
+  @@unique([productVersionId, key])
+  @@map("product_health_checks")
+}
+
+// =====================================================================
+// Group B — Pilot / organization
+// =====================================================================
+
+enum PilotStatus {
+  draft
+  provisioning
+  ready
+  invited
+  active
+  extension_pending
+  extended
+  conversion_review
+  converted
+  expired
+  suspended
+  revoked
+  declined
+  failed_provisioning
+  exported
+  destroyed
+}
+
+enum PilotRole {
+  primary_contact
+  evaluator
+  observer
+}
+
+model PilotOrganization {
+  id                  String   @id @default(cuid())
+  name                String
+  primaryContactEmail String
+  primaryContactName  String?
+  notes               String?
+  createdAt           DateTime @default(now())
+
+  pilotPrograms PilotProgram[]
+
+  @@map("pilot_organizations")
+}
+
+model PilotProgram {
+  id               String      @id @default(cuid())
+  pilotOrgId       String
+  productId        String
+  productVersionId String
+  templateKey      String
+  name             String
+  status           PilotStatus @default(draft)
+  startAt          DateTime?
+  expiresAt        DateTime?
+  createdByActor   String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  pilotOrg            PilotOrganization    @relation(fields: [pilotOrgId], references: [id], onDelete: Cascade)
+  product             Product              @relation(fields: [productId], references: [id])
+  productVersion      ProductVersion       @relation(fields: [productVersionId], references: [id])
+  environment         PilotEnvironment?
+  participants        PilotParticipant[]
+  milestones          PilotMilestone[]
+  invitations         Invitation[]
+  accessGrants        AccessGrant[]
+  entitlements        PilotEntitlement[]
+  provisioningRuns    ProvisioningRun[]
+  exportRequests      ExportRequest[]
+  destructionRequests DestructionRequest[]
+  usageEvents         UsageEvent[]
+  feedbackRecords     FeedbackRecord[]
+  conversionRecord    ConversionRecord?
+  auditEvents         AuditEvent[]
+
+  @@index([status])
+  @@index([expiresAt])
+  @@map("pilot_programs")
+}
+
+enum PilotEnvironmentStatus {
+  provisioning
+  ready
+  suspended
+  failed
+  destroyed
+}
+
+model PilotEnvironment {
+  id                      String                 @id @default(cuid())
+  pilotProgramId          String                 @unique
+  environmentTypeId       String
+  status                  PilotEnvironmentStatus @default(provisioning)
+  adapterState            Json                   @default("{}")
+  currentDatasetVersionId String?
+  lastHealthCheckAt       DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  pilotProgram          PilotProgram           @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  environmentType       ProductEnvironmentType @relation(fields: [environmentTypeId], references: [id])
+  currentDatasetVersion DatasetVersion?        @relation(fields: [currentDatasetVersionId], references: [id])
+  accessGrants          AccessGrant[]
+  provisioningRuns      ProvisioningRun[]
+  healthEvents          HealthEvent[]
+
+  @@map("pilot_environments")
+}
+
+enum PilotParticipantStatus {
+  invited
+  active
+  expired
+  revoked
+  declined
+}
+
+model PilotParticipant {
+  id             String                 @id @default(cuid())
+  pilotProgramId String
+  email          String
+  displayName    String?
+  role           PilotRole
+  status         PilotParticipantStatus @default(invited)
+  invitedAt      DateTime?
+  createdAt      DateTime               @default(now())
+
+  pilotProgram PilotProgram     @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  invitations  Invitation[]
+  accessGrants AccessGrant[]
+  sessions     Session[]
+  usageEvents  UsageEvent[]
+  feedback     FeedbackRecord[]
+
+  @@unique([pilotProgramId, email])
+  @@map("pilot_participants")
+}
+
+model PilotMilestone {
+  id             String   @id @default(cuid())
+  pilotProgramId String
+  kind           String
+  occurredAt     DateTime @default(now())
+  metadataJson   Json     @default("{}")
+  sourceEventId  String?
+
+  pilotProgram PilotProgram @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+
+  @@index([pilotProgramId, kind])
+  @@map("pilot_milestones")
+}
+
+// =====================================================================
+// Group C — Access & security
+//
+// AccessToken collapses into Session.tokenHash; FeatureFlag collapses into
+// PilotEntitlement; Revocation collapses into status/revokedAt/revokedReason
+// fields plus the mandatory AuditEvent row on every revoke.
+// =====================================================================
+
+enum InvitationStatus {
+  pending
+  redeemed
+  expired
+  revoked
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  pilotProgramId String
+  participantId  String
+  roleAtIssuance PilotRole
+  tokenHash      String           @unique
+  status         InvitationStatus @default(pending)
+  expiresAt      DateTime
+  redeemedAt     DateTime?
+  createdByActor String
+  createdAt      DateTime         @default(now())
+
+  pilotProgram PilotProgram     @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  participant  PilotParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([pilotProgramId])
+  @@map("invitations")
+}
+
+enum AccessGrantStatus {
+  active
+  revoked
+  expired
+}
+
+model AccessGrant {
+  id               String            @id @default(cuid())
+  pilotProgramId   String
+  participantId    String
+  productId        String
+  productVersionId String
+  environmentId    String
+  role             PilotRole
+  expiresAt        DateTime
+  status           AccessGrantStatus @default(active)
+  revokedAt        DateTime?
+  revokedReason    String?
+  createdAt        DateTime          @default(now())
+
+  pilotProgram   PilotProgram     @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  participant    PilotParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  product        Product          @relation(fields: [productId], references: [id])
+  productVersion ProductVersion   @relation(fields: [productVersionId], references: [id])
+  environment    PilotEnvironment @relation(fields: [environmentId], references: [id])
+  sessions       Session[]
+
+  @@index([pilotProgramId, status])
+  @@map("access_grants")
+}
+
+enum EntitlementSource {
+  template_default
+  admin_override
+}
+
+model PilotEntitlement {
+  id               String            @id @default(cuid())
+  pilotProgramId   String
+  productFeatureId String
+  enabled          Boolean           @default(false)
+  source           EntitlementSource @default(template_default)
+  updatedAt        DateTime          @updatedAt
+
+  pilotProgram   PilotProgram   @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  productFeature ProductFeature @relation(fields: [productFeatureId], references: [id], onDelete: Cascade)
+
+  @@unique([pilotProgramId, productFeatureId])
+  @@map("pilot_entitlements")
+}
+
+model Session {
+  id            String    @id @default(cuid())
+  participantId String
+  accessGrantId String
+  tokenHash     String    @unique
+  createdAt     DateTime  @default(now())
+  expiresAt     DateTime
+  lastSeenAt    DateTime  @default(now())
+  revokedAt     DateTime?
+  revokedReason String?
+  userAgent     String?
+  ipHash        String?
+
+  participant PilotParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  accessGrant AccessGrant      @relation(fields: [accessGrantId], references: [id], onDelete: Cascade)
+
+  @@index([accessGrantId])
+  @@map("sessions")
+}
+
+// =====================================================================
+// Group D — Data lifecycle / provisioning
+//
+// ResetRun collapses into ProvisioningRun via the `kind` discriminator.
+// =====================================================================
+
+enum SensitivityClassification {
+  synthetic
+}
+
+model DemoDataset {
+  id          String   @id @default(cuid())
+  productId   String
+  key         String
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  product  Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+  versions DatasetVersion[]
+
+  @@unique([productId, key])
+  @@map("demo_datasets")
+}
+
+model DatasetVersion {
+  id                        String                    @id @default(cuid())
+  demoDatasetId             String
+  version                   String
+  schemaVersion             String                    @default("1")
+  digest                    String
+  createdAt                 DateTime                  @default(now())
+  createdBy                 String
+  sensitivityClassification SensitivityClassification @default(synthetic)
+  syntheticDeclaration      Boolean                   @default(true)
+  supportedProductVersions  String[]
+  resetBehavior             String                    @default("full_reset")
+  storageRef                String
+
+  demoDataset      DemoDataset        @relation(fields: [demoDatasetId], references: [id], onDelete: Cascade)
+  environments     PilotEnvironment[]
+  provisioningRuns ProvisioningRun[]
+
+  @@unique([demoDatasetId, version])
+  @@map("dataset_versions")
+}
+
+enum ProvisioningRunKind {
+  initial_provision
+  reset
+}
+
+enum ProvisioningRunStatus {
+  pending
+  running
+  succeeded
+  failed
+}
+
+model ProvisioningRun {
+  id                 String                @id @default(cuid())
+  pilotProgramId     String
+  pilotEnvironmentId String
+  datasetVersionId   String?
+  kind               ProvisioningRunKind
+  status             ProvisioningRunStatus @default(pending)
+  idempotencyKey     String                @unique
+  startedAt          DateTime              @default(now())
+  finishedAt         DateTime?
+  resultJson         Json?
+  errorMessage       String?
+  triggeredByActor   String
+
+  pilotProgram     PilotProgram     @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  pilotEnvironment PilotEnvironment @relation(fields: [pilotEnvironmentId], references: [id], onDelete: Cascade)
+  datasetVersion   DatasetVersion?  @relation(fields: [datasetVersionId], references: [id])
+
+  @@index([pilotProgramId])
+  @@map("provisioning_runs")
+}
+
+enum ExportRequestStatus {
+  pending
+  ready
+  delivered
+  expired
+}
+
+model ExportRequest {
+  id                 String              @id @default(cuid())
+  pilotProgramId     String
+  requestedByActor   String
+  requestedAt        DateTime            @default(now())
+  status             ExportRequestStatus @default(pending)
+  scopeJson          Json                @default("{}")
+  deliveredAt        DateTime?
+  storageRef         String?
+  retentionExpiresAt DateTime?
+  checksumDigest     String?
+
+  pilotProgram PilotProgram @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+
+  @@index([pilotProgramId])
+  @@map("export_requests")
+}
+
+enum DestructionRequestStatus {
+  pending
+  blocked
+  scheduled
+  executed
+}
+
+model DestructionRequest {
+  id               String                   @id @default(cuid())
+  pilotProgramId   String
+  requestedByActor String
+  requestedAt      DateTime                 @default(now())
+  status           DestructionRequestStatus @default(pending)
+  scheduledFor     DateTime?
+  executedAt       DateTime?
+  receiptDigest    String?
+  receiptJson      Json?
+  blockingReason   String?
+
+  pilotProgram PilotProgram @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+
+  @@index([pilotProgramId])
+  @@map("destruction_requests")
+}
+
+// =====================================================================
+// Group E — Telemetry, feedback, conversion, audit
+// =====================================================================
+
+enum UsageEventType {
+  session_started
+  product_opened
+  major_feature_entered
+  demonstration_workflow_completed
+  error_encountered
+  feedback_submitted
+  extension_requested
+  export_requested
+}
+
+model UsageEvent {
+  id             String         @id @default(cuid())
+  pilotProgramId String
+  participantId  String?
+  type           UsageEventType
+  metadataJson   Json           @default("{}")
+  occurredAt     DateTime       @default(now())
+
+  pilotProgram PilotProgram      @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  participant  PilotParticipant? @relation(fields: [participantId], references: [id])
+
+  @@index([pilotProgramId, type])
+  @@map("usage_events")
+}
+
+enum HealthStatus {
+  healthy
+  degraded
+  down
+  unknown
+}
+
+model HealthEvent {
+  id                   String       @id @default(cuid())
+  pilotEnvironmentId   String
+  productHealthCheckId String?
+  status               HealthStatus
+  detailJson           Json         @default("{}")
+  occurredAt           DateTime     @default(now())
+
+  pilotEnvironment   PilotEnvironment    @relation(fields: [pilotEnvironmentId], references: [id], onDelete: Cascade)
+  productHealthCheck ProductHealthCheck? @relation(fields: [productHealthCheckId], references: [id])
+
+  @@index([pilotEnvironmentId])
+  @@map("health_events")
+}
+
+// SupportRequest is intentionally not a separate table — "report an issue"
+// is FeedbackRecord with category = issue. See docs/DATA_MODEL.md.
+enum FeedbackCategory {
+  general
+  issue
+}
+
+enum FeedbackStatus {
+  open
+  acknowledged
+  resolved
+}
+
+model FeedbackRecord {
+  id             String           @id @default(cuid())
+  pilotProgramId String
+  participantId  String
+  category       FeedbackCategory @default(general)
+  rating         Int?
+  comment        String?
+  subject        String?
+  status         FeedbackStatus   @default(open)
+  createdAt      DateTime         @default(now())
+
+  pilotProgram PilotProgram     @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  participant  PilotParticipant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([pilotProgramId, category])
+  @@map("feedback_records")
+}
+
+enum ConversionStatus {
+  draft
+  ready_for_review
+  approved
+  declined
+}
+
+model ConversionRecord {
+  id               String           @id @default(cuid())
+  pilotProgramId   String           @unique
+  status           ConversionStatus @default(draft)
+  packetJson       Json
+  recommendedPlan  String?
+  unresolvedRisks  String?
+  generatedAt      DateTime         @default(now())
+  generatedByActor String
+  crmRefId         String?
+
+  pilotProgram PilotProgram @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+
+  @@map("conversion_records")
+}
+
+enum AuthorityClassification {
+  admin_action
+  participant_action
+  system_automated
+}
+
+model AuditEvent {
+  id                      String                  @id @default(cuid())
+  pilotProgramId          String?
+  actorJson               Json
+  action                  String
+  priorStateJson          Json?
+  newStateJson            Json?
+  reason                  String?
+  relatedProductId        String?
+  relatedGrantIds         String[]
+  sourceRoute             String
+  authorityClassification AuthorityClassification
+  occurredAt              DateTime                @default(now())
+
+  pilotProgram   PilotProgram? @relation(fields: [pilotProgramId], references: [id], onDelete: Cascade)
+  relatedProduct Product?      @relation(fields: [relatedProductId], references: [id])
+
+  @@index([pilotProgramId, occurredAt])
+  @@map("audit_events")
+}
