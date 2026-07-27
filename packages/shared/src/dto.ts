@@ -137,6 +137,13 @@ export const CreateDestructionRequestSchema = z.object({
 });
 export type CreateDestructionRequestInput = z.infer<typeof CreateDestructionRequestSchema>;
 
+export const GenerateConversionPacketSchema = z.object({
+  recommendedPlan: z.string().max(4000).optional(),
+  unresolvedRisks: z.string().max(4000).optional(),
+  requestedChanges: z.array(z.string()).default([]),
+});
+export type GenerateConversionPacketInput = z.infer<typeof GenerateConversionPacketSchema>;
+
 export const RecordUsageEventSchema = z.object({
   type: z.enum([
     "session_started",

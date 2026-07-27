@@ -129,6 +129,22 @@ export default function PilotDetail() {
           Export
         </button>
         <ReasonAction label="Destroy" tone="bg-red-900 hover:bg-red-800" onSubmit={(reason) => act("/destroy", { reason }, "Destruction executed.")} />
+        <button
+          className="rounded bg-fuchsia-700 px-3 py-1.5 text-sm text-white hover:bg-fuchsia-600"
+          onClick={async () => {
+            try {
+              await api.post(`/pilots/${id}/conversion`, {});
+              setActionError(null);
+              setActionMessage("Conversion packet generated.");
+              load();
+            } catch (err) {
+              setActionMessage(null);
+              setActionError(err instanceof Error ? err.message : String(err));
+            }
+          }}
+        >
+          Generate conversion packet
+        </button>
       </div>
 
       <div className="flex gap-1 border-b border-slate-800 text-sm">
@@ -226,6 +242,23 @@ export default function PilotDetail() {
                 {pilot.destructionRequests.length === 0 && <li className="text-xs text-slate-500">No destruction requests.</li>}
               </ul>
             </div>
+          </div>
+
+          <div className="rounded-lg border border-slate-800 bg-slate-900 p-4 md:col-span-2">
+            <h2 className="mb-2 text-sm font-semibold text-slate-200">Conversion packet</h2>
+            {pilot.conversionRecord ? (
+              <>
+                <div className="mb-2 flex items-center gap-2 text-sm">
+                  <StatusBadge status={pilot.conversionRecord.status} />
+                  <span className="text-xs text-slate-500">generated {new Date(pilot.conversionRecord.generatedAt).toLocaleString()}</span>
+                </div>
+                <pre className="max-h-64 overflow-auto rounded bg-slate-950 p-2 text-xs text-slate-400">
+                  {JSON.stringify(pilot.conversionRecord.packetJson, null, 2)}
+                </pre>
+              </>
+            ) : (
+              <p className="text-xs text-slate-500">No conversion packet generated yet.</p>
+            )}
           </div>
         </div>
       )}

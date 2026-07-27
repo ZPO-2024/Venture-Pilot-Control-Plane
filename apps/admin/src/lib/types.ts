@@ -154,6 +154,7 @@ export interface PilotDetail extends PilotSummary {
   destructionRequests: DestructionRequest[];
   feedbackRecords: FeedbackRecord[];
   milestones: { id: string; kind: string; occurredAt: string; metadataJson: unknown }[];
+  conversionRecord?: { id: string; status: string; generatedAt: string; packetJson: unknown } | null;
 }
 
 export interface AuditEventView {

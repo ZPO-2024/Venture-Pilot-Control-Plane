@@ -11,6 +11,7 @@ import {
   ProvisionPilotSchema,
   CreateExportRequestSchema,
   CreateDestructionRequestSchema,
+  GenerateConversionPacketSchema,
   NotFoundError,
   PilotControlPlaneError,
   actorToJson,
@@ -310,6 +311,84 @@ export function registerPilotsAdminRoutes(app: FastifyInstance): void {
       reason: body.reason,
     });
     reply.send(result);
+  });
+
+  app.post<{ Params: { id: string } }>("/pilots/:id/conversion", async (request, reply) => {
+    const body = parseBody(GenerateConversionPacketSchema, request.body);
+    const pilot = await loadPilotOr404(request.params.id);
+
+    const [full, usageEvents, feedbackRecords, auditEvents, exportRequests, destructionRequests] = await Promise.all([
+      prisma.pilotProgram.findUniqueOrThrow({
+        where: { id: pilot.id },
+        include: {
+          product: true,
+          productVersion: true,
+          participants: true,
+          entitlements: { include: { productFeature: true }, where: { enabled: true } },
+        },
+      }),
+      prisma.usageEvent.findMany({ where: { pilotProgramId: pilot.id } }),
+      prisma.feedbackRecord.findMany({ where: { pilotProgramId: pilot.id } }),
+      prisma.auditEvent.findMany({ where: { pilotProgramId: pilot.id }, orderBy: { occurredAt: "asc" } }),
+      prisma.exportRequest.findMany({ where: { pilotProgramId: pilot.id } }),
+      prisma.destructionRequest.findMany({ where: { pilotProgramId: pilot.id } }),
+    ]);
+
+    const packet = {
+      product: full.product.name,
+      productVersion: full.productVersion.version,
+      trialDates: { startAt: full.startAt, expiresAt: full.expiresAt },
+      participants: full.participants.map((p) => ({ email: p.email, role: p.role, status: p.status })),
+      featuresUsed: full.entitlements.map((e) => e.productFeature.key),
+      workflowsCompleted: usageEvents.filter((e) => e.type === "demonstration_workflow_completed").map((e) => e.occurredAt),
+      errorsEncountered: usageEvents.filter((e) => e.type === "error_encountered").map((e) => ({ occurredAt: e.occurredAt, metadata: e.metadataJson })),
+      feedback: feedbackRecords.map((f) => ({ category: f.category, rating: f.rating, comment: f.comment, subject: f.subject })),
+      requestedChanges: body.requestedChanges,
+      extensionHistory: auditEvents
+        .filter((e) => e.action.includes("extend"))
+        .map((e) => ({ occurredAt: e.occurredAt, reason: e.reason })),
+      dataDisposition: {
+        exports: exportRequests.map((e) => ({ status: e.status, requestedAt: e.requestedAt, retentionExpiresAt: e.retentionExpiresAt })),
+        destructions: destructionRequests.map((d) => ({ status: d.status, requestedAt: d.requestedAt })),
+      },
+      recommendedProductionPlan: body.recommendedPlan ?? null,
+      unresolvedRisks: body.unresolvedRisks ?? null,
+    };
+
+    const conversionRecord = await prisma.$transaction(async (tx) => {
+      if (["active", "extended"].includes(full.status)) {
+        await transitionPilot(tx, {
+          pilotProgramId: pilot.id,
+          toState: "conversion_review",
+          actor: request.actor!,
+          reason: "Admin compiled a conversion packet",
+          sourceRoute: "POST /pilots/:id/conversion",
+          authorityClassification: "admin_action",
+        });
+      }
+
+      return tx.conversionRecord.upsert({
+        where: { pilotProgramId: pilot.id },
+        update: {
+          status: "ready_for_review",
+          packetJson: packet as unknown as Prisma.InputJsonValue,
+          recommendedPlan: body.recommendedPlan,
+          unresolvedRisks: body.unresolvedRisks,
+          generatedAt: new Date(),
+          generatedByActor: request.actor!.id,
+        },
+        create: {
+          pilotProgramId: pilot.id,
+          status: "ready_for_review",
+          packetJson: packet as unknown as Prisma.InputJsonValue,
+          recommendedPlan: body.recommendedPlan,
+          unresolvedRisks: body.unresolvedRisks,
+          generatedByActor: request.actor!.id,
+        },
+      });
+    });
+
+    reply.status(201).send(conversionRecord);
   });
 
   app.get<{ Params: { id: string } }>("/pilots/:id/audit", async (request) => {
