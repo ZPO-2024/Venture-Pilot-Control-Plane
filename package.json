@@ -29,6 +29,13 @@
   "devDependencies": {
     "@playwright/test": "1.48.2",
     "@types/node": "22.9.0",
+    "@venture-pilot/access-grants": "workspace:*",
+    "@venture-pilot/audit": "workspace:*",
+    "@venture-pilot/db": "workspace:*",
+    "@venture-pilot/entitlements": "workspace:*",
+    "@venture-pilot/product-adapters": "workspace:*",
+    "@venture-pilot/provisioning": "workspace:*",
+    "@venture-pilot/shared": "workspace:*",
     "dotenv-cli": "7.4.2",
     "typescript": "5.6.3",
     "vitest": "2.1.4"

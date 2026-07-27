@@ -99,8 +99,15 @@ export type RevokePilotInput = z.infer<typeof RevokePilotSchema>;
 
 export const ResetPilotSchema = z.object({
   reason: z.string().min(1).max(1000),
+  idempotencyKey: z.string().min(1).max(200).optional(),
 });
 export type ResetPilotInput = z.infer<typeof ResetPilotSchema>;
+
+export const ProvisionPilotSchema = z.object({
+  reason: z.string().max(1000).optional(),
+  idempotencyKey: z.string().min(1).max(200).optional(),
+});
+export type ProvisionPilotInput = z.infer<typeof ProvisionPilotSchema>;
 
 export const FeedbackCategorySchema = z.enum(["general", "issue"]);
 

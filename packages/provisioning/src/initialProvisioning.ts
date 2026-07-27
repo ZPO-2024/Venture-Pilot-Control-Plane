@@ -33,7 +33,8 @@ async function runProvisioningOperation(
   const existing = await prisma.provisioningRun.findUnique({ where: { idempotencyKey: args.idempotencyKey } });
   if (existing?.status === "succeeded") {
     const cached = existing.resultJson as { recordCounts: Record<string, number>; datasetVersionId: string };
-    return { cached: true, ...cached };
+    // `cached: true` last and explicit -- never let a spread silently win.
+    return { ...cached, cached: true };
   }
 
   const chain = await verifyTenantChain(prisma, args.pilotProgramId);
@@ -120,11 +121,12 @@ async function runProvisioningOperation(
     const applied = await adapter.applyEntitlements(ctx, state, { featureKeys });
     state = applied.state;
 
-    const result: RunProvisioningResult = {
-      cached: false,
-      recordCounts: loaded.data.recordCounts,
-      datasetVersionId: datasetVersion.id,
-    };
+    // Stored without `cached` -- that field is call-site metadata about
+    // *this* invocation, not a fact about the run itself, and including it
+    // here would let a stored `cached: false` clobber the `cached: true`
+    // a later cache-hit read needs to report.
+    const persistedResult = { recordCounts: loaded.data.recordCounts, datasetVersionId: datasetVersion.id };
+    const result: RunProvisioningResult = { cached: false, ...persistedResult };
 
     await prisma.$transaction(async (tx) => {
       await tx.pilotEnvironment.update({
@@ -133,7 +135,7 @@ async function runProvisioningOperation(
       });
       await tx.provisioningRun.update({
         where: { id: run.id },
-        data: { status: "succeeded", finishedAt: new Date(), resultJson: result as unknown as Prisma.InputJsonValue },
+        data: { status: "succeeded", finishedAt: new Date(), resultJson: persistedResult as unknown as Prisma.InputJsonValue },
       });
 
       if (kind === "initial_provision" && pilotProgram.status === "provisioning") {
