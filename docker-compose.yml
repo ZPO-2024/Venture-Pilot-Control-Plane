@@ -18,9 +18,83 @@ services:
       timeout: 5s
       retries: 10
 
-# NOTE: api / worker / admin / participant-portal services are added in
-# Phase 11 once the corresponding apps exist. Until then, run them locally
-# with `pnpm dev` against this Postgres instance (see README.md).
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      API_PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pilot}:${POSTGRES_PASSWORD:-pilot_dev_only}@postgres:5432/${POSTGRES_DB:-venture_pilot}?schema=public
+      ADMIN_API_TOKEN: ${ADMIN_API_TOKEN:-dev-only-admin-token-change-me}
+      TOKEN_PEPPER: ${TOKEN_PEPPER:-dev-only-token-pepper-change-me}
+      DEFAULT_TRIAL_DURATION_DAYS: ${DEFAULT_TRIAL_DURATION_DAYS:-7}
+      EXPIRING_SOON_THRESHOLD_HOURS: ${EXPIRING_SOON_THRESHOLD_HOURS:-48}
+      EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-14}
+      DESTRUCTION_GRACE_DAYS: ${DESTRUCTION_GRACE_DAYS:-3}
+      RATE_LIMIT_REDEMPTION_MAX: ${RATE_LIMIT_REDEMPTION_MAX:-10}
+      RATE_LIMIT_REDEMPTION_WINDOW_MS: ${RATE_LIMIT_REDEMPTION_WINDOW_MS:-60000}
+      RATE_LIMIT_ADMIN_AUTH_MAX: ${RATE_LIMIT_ADMIN_AUTH_MAX:-30}
+      RATE_LIMIT_ADMIN_AUTH_WINDOW_MS: ${RATE_LIMIT_ADMIN_AUTH_WINDOW_MS:-60000}
+    # Applies migrations (and seeds the demo product catalog, harmlessly
+    # idempotent via upserts) before the API starts -- so a fresh
+    # `docker compose up` needs no separate manual migration step.
+    command: >
+      sh -c "pnpm --filter @venture-pilot/db migrate:deploy &&
+             pnpm --filter @venture-pilot/db seed &&
+             pnpm --filter @venture-pilot/api start"
+    ports:
+      - "${API_PORT:-4000}:4000"
+    volumes:
+      - ./deployment/exports:/repo/deployment/exports
+
+  worker:
+    build:
+      context: .
+      dockerfile: apps/worker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_started
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-pilot}:${POSTGRES_PASSWORD:-pilot_dev_only}@postgres:5432/${POSTGRES_DB:-venture_pilot}?schema=public
+      WORKER_SWEEP_INTERVAL_SECONDS: ${WORKER_SWEEP_INTERVAL_SECONDS:-60}
+      EXPIRING_SOON_THRESHOLD_HOURS: ${EXPIRING_SOON_THRESHOLD_HOURS:-48}
+      EXPORT_RETENTION_DAYS: ${EXPORT_RETENTION_DAYS:-14}
+    volumes:
+      - ./deployment/exports:/repo/deployment/exports
+
+  admin:
+    build:
+      context: .
+      dockerfile: apps/admin/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${ADMIN_PORT:-5173}:80"
+
+  participant-portal:
+    build:
+      context: .
+      dockerfile: apps/participant-portal/Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:4000}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${PARTICIPANT_PORTAL_PORT:-5174}:80"
 
 volumes:
   pilot_postgres_data:

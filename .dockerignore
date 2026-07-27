@@ -1,0 +1,14 @@
+node_modules
+**/node_modules
+**/dist
+.git
+.turbo
+coverage
+deployment/exports
+deployment/backups
+*.log
+.env
+.env.test
+.env.test.local
+playwright-report
+test-results
