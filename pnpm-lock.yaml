@@ -56,6 +56,38 @@ importers:
         specifier: 5.6.3
         version: 5.6.3
 
+  packages/product-adapters:
+    dependencies:
+      '@venture-pilot/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: 2.1.4
+        version: 2.1.4(@types/node@22.9.0)
+
+  packages/provisioning:
+    dependencies:
+      '@venture-pilot/db':
+        specifier: workspace:*
+        version: link:../db
+      '@venture-pilot/product-adapters':
+        specifier: workspace:*
+        version: link:../product-adapters
+      '@venture-pilot/shared':
+        specifier: workspace:*
+        version: link:../shared
+    devDependencies:
+      typescript:
+        specifier: 5.6.3
+        version: 5.6.3
+      vitest:
+        specifier: 2.1.4
+        version: 2.1.4(@types/node@22.9.0)
+
   packages/shared:
     dependencies:
       '@venture-pilot/db':

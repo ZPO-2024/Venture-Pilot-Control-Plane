@@ -13,6 +13,9 @@ coverage/
 packages/db/generated/
 packages/db/prisma/dev.db
 
+deployment/exports/
+deployment/backups/
+
 playwright-report/
 test-results/
 playwright/.cache/
