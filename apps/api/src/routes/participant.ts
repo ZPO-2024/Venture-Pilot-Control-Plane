@@ -31,6 +31,7 @@ export function registerParticipantRoutes(app: FastifyInstance): void {
     ]);
 
     return {
+      pilotProgramId: pilot.id,
       pilotName: pilot.name,
       productName: pilot.product.name,
       role: session.participantRole,
