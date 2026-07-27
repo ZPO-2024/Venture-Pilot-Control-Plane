@@ -9,6 +9,7 @@ export default defineConfig({
       "packages/*/src/**/*.test.ts",
       "apps/*/src/**/*.test.ts",
       "tests/security/**/*.test.ts",
+      "tests/integration/**/*.test.ts",
       "tests/scenarios/**/*.test.ts",
     ],
     // tests/security and tests/scenarios hit a real Postgres test database

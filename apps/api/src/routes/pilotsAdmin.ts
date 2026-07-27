@@ -360,13 +360,17 @@ export function registerPilotsAdminRoutes(app: FastifyInstance): void {
     const body = parseBody(CreateDestructionRequestSchema, request.body);
     const pilot = await loadPilotOr404(request.params.id);
 
+    const scheduledFor = body.scheduledFor ? new Date(body.scheduledFor) : undefined;
     const destructionRequest = await prisma.destructionRequest.create({
-      data: {
-        pilotProgramId: pilot.id,
-        requestedByActor: request.actor!.id,
-        scheduledFor: body.scheduledFor ? new Date(body.scheduledFor) : undefined,
-      },
+      data: { pilotProgramId: pilot.id, requestedByActor: request.actor!.id, scheduledFor },
     });
+
+    // A future scheduledFor defers execution to apps/worker's sweep; an
+    // admin destroying "now" (the common case) executes immediately.
+    if (scheduledFor && scheduledFor.getTime() > Date.now()) {
+      reply.status(201).send({ destructionRequestId: destructionRequest.id, status: "pending", scheduledFor });
+      return;
+    }
 
     const result = await runDestruction(prisma, {
       pilotProgramId: pilot.id,
