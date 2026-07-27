@@ -85,10 +85,15 @@ This builds and runs Postgres, the API, the worker, and both frontends
 | `pnpm test` | Run all Vitest unit/integration tests |
 | `pnpm test:security` | Run only the required security test suite |
 | `pnpm test:scenarios` | Run the two full synthetic demo scenarios end-to-end |
-| `pnpm test:e2e` | Run Playwright browser tests |
+| `pnpm test:e2e` | Run Playwright browser tests (requires `pnpm dev` or `docker compose up` already running against a migrated + seeded database) |
 | `pnpm build` | Production build of all apps/packages |
 | `deployment/backup.sh` | Dump the Postgres database to `deployment/backups/` |
 | `deployment/restore.sh <file>` | Restore a database dump |
+
+If Playwright's pre-downloaded browser build doesn't match the
+`@playwright/test` version pinned here, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE`
+to the browser binary path Playwright should launch instead of trying to
+download a new one (`playwright.config.ts` picks it up automatically).
 
 ## Running the synthetic demonstrations
 
