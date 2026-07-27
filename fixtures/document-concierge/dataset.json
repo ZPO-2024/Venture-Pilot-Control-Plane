@@ -1,0 +1,57 @@
+{
+  "synthetic": true,
+  "notice": "Every record in this dataset is fabricated for demonstration purposes only. No real client, matter, vendor, or case data is present anywhere in this file.",
+  "product": "document-concierge",
+  "business": {
+    "name": "Example Synthetic Professional Office",
+    "kind": "small professional services office (demo only)"
+  },
+  "invoices": [
+    { "id": "inv-synth-001", "client": "Example Client A", "amount": 1240.0, "issuedAt": "2026-06-01", "status": "paid" },
+    { "id": "inv-synth-002", "client": "Example Client B", "amount": 860.5, "issuedAt": "2026-06-10", "status": "outstanding" },
+    { "id": "inv-synth-003", "client": "Example Client C", "amount": 3120.0, "issuedAt": "2026-06-18", "status": "overdue" }
+  ],
+  "estimates": [
+    { "id": "est-synth-001", "client": "Example Client A", "amount": 2500.0, "validUntil": "2026-08-01" },
+    { "id": "est-synth-002", "client": "Example Client D", "amount": 975.0, "validUntil": "2026-08-15" }
+  ],
+  "contracts": [
+    { "id": "ctr-synth-001", "client": "Example Client A", "title": "Example Synthetic Services Agreement", "signedAt": "2026-01-15", "term": "12 months" },
+    { "id": "ctr-synth-002", "client": "Example Client C", "title": "Example Synthetic Retainer Agreement", "signedAt": "2026-03-01", "term": "6 months" }
+  ],
+  "warranties": [
+    { "id": "war-synth-001", "item": "Example synthetic equipment unit #1", "expiresAt": "2027-01-01" },
+    { "id": "war-synth-002", "item": "Example synthetic equipment unit #2", "expiresAt": "2026-09-30" }
+  ],
+  "manuals": [
+    { "id": "man-synth-001", "title": "Example Synthetic Intake Procedure Manual", "version": "1.0" },
+    { "id": "man-synth-002", "title": "Example Synthetic Filing Standards Manual", "version": "2.1" }
+  ],
+  "correspondence": [
+    { "id": "corr-synth-001", "with": "Example Client B", "subject": "Example synthetic follow-up on outstanding invoice", "sentAt": "2026-06-15" },
+    { "id": "corr-synth-002", "with": "Example Client D", "subject": "Example synthetic estimate clarification", "sentAt": "2026-06-20" }
+  ],
+  "duplicateFiles": [
+    {
+      "id": "dup-synth-001",
+      "originalId": "ctr-synth-001",
+      "duplicateOfTitle": "Example Synthetic Services Agreement",
+      "detectedAt": "2026-06-22",
+      "note": "Identical file uploaded twice under different filenames (synthetic demonstration)"
+    }
+  ],
+  "amendedRecords": [
+    {
+      "id": "amend-synth-001",
+      "originalId": "ctr-synth-002",
+      "amendmentTitle": "Example Synthetic Amendment No. 1",
+      "amendedAt": "2026-05-01",
+      "summary": "Synthetic amendment extending the retainer term by 3 months"
+    }
+  ],
+  "upcomingDeadlines": [
+    { "id": "deadline-synth-001", "relatedId": "war-synth-002", "description": "Example synthetic warranty expiration", "dueAt": "2026-09-30" },
+    { "id": "deadline-synth-002", "relatedId": "ctr-synth-002", "description": "Example synthetic contract renewal decision", "dueAt": "2026-08-25" },
+    { "id": "deadline-synth-003", "relatedId": "inv-synth-003", "description": "Example synthetic overdue invoice follow-up", "dueAt": "2026-07-05" }
+  ]
+}

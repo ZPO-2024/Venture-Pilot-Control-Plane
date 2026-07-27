@@ -1,0 +1,19 @@
+{
+  "synthetic": true,
+  "notice": "Every record in this dataset is fabricated for demonstration purposes only. No real workspace, document, or task data is present anywhere in this file.",
+  "product": "generic-web-application",
+  "business": {
+    "name": "Example Synthetic Workspace",
+    "kind": "generic productivity workspace (demo only)"
+  },
+  "documents": [
+    { "id": "doc-synth-001", "title": "Example Synthetic Project Brief", "updatedAt": "2026-06-01" },
+    { "id": "doc-synth-002", "title": "Example Synthetic Meeting Notes", "updatedAt": "2026-06-05" },
+    { "id": "doc-synth-003", "title": "Example Synthetic Roadmap Draft", "updatedAt": "2026-06-10" }
+  ],
+  "tasks": [
+    { "id": "task-synth-001", "title": "Example synthetic onboarding task", "status": "done" },
+    { "id": "task-synth-002", "title": "Example synthetic review task", "status": "in_progress" },
+    { "id": "task-synth-003", "title": "Example synthetic follow-up task", "status": "todo" }
+  ]
+}

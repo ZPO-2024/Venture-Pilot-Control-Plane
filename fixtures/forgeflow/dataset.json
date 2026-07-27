@@ -1,0 +1,62 @@
+{
+  "synthetic": true,
+  "notice": "Every record in this dataset is fabricated for demonstration purposes only. No real menu, order, vendor, or customer data is present anywhere in this file.",
+  "product": "forgeflow",
+  "business": {
+    "name": "Example Synthetic Mobile BBQ Co.",
+    "kind": "mobile food business (demo only)"
+  },
+  "catalog": [
+    { "id": "item-synth-001", "name": "Example Synthetic Brisket Plate", "price": 14.5, "station": "smoker" },
+    { "id": "item-synth-002", "name": "Example Synthetic Pulled Pork Sandwich", "price": 9.0, "station": "smoker" },
+    { "id": "item-synth-003", "name": "Example Synthetic Side of Slaw", "price": 3.5, "station": "cold-prep" },
+    { "id": "item-synth-004", "name": "Example Synthetic Sweet Tea", "price": 2.5, "station": "drinks" }
+  ],
+  "stations": [
+    { "id": "station-synth-smoker", "label": "Smoker Station" },
+    { "id": "station-synth-cold-prep", "label": "Cold Prep Station" },
+    { "id": "station-synth-drinks", "label": "Drinks Station" },
+    { "id": "station-synth-window", "label": "Pickup Window" }
+  ],
+  "routingRules": [
+    { "id": "route-synth-001", "itemId": "item-synth-001", "routeToStationId": "station-synth-smoker" },
+    { "id": "route-synth-002", "itemId": "item-synth-002", "routeToStationId": "station-synth-smoker" },
+    { "id": "route-synth-003", "itemId": "item-synth-003", "routeToStationId": "station-synth-cold-prep" },
+    { "id": "route-synth-004", "itemId": "item-synth-004", "routeToStationId": "station-synth-drinks" }
+  ],
+  "orders": [
+    {
+      "id": "order-synth-001",
+      "placedAt": "2026-06-01T11:05:00Z",
+      "items": [{ "itemId": "item-synth-001", "qty": 1 }, { "itemId": "item-synth-004", "qty": 1 }],
+      "status": "completed"
+    },
+    {
+      "id": "order-synth-002",
+      "placedAt": "2026-06-01T11:20:00Z",
+      "items": [{ "itemId": "item-synth-002", "qty": 2 }, { "itemId": "item-synth-003", "qty": 1 }],
+      "status": "in_progress"
+    },
+    {
+      "id": "order-synth-003",
+      "placedAt": "2026-06-01T11:35:00Z",
+      "items": [{ "itemId": "item-synth-001", "qty": 1 }],
+      "status": "cancelled"
+    }
+  ],
+  "updates": [
+    { "id": "update-synth-001", "orderId": "order-synth-001", "status": "completed", "at": "2026-06-01T11:18:00Z" },
+    { "id": "update-synth-002", "orderId": "order-synth-002", "status": "in_progress", "at": "2026-06-01T11:22:00Z" }
+  ],
+  "cancellations": [
+    { "id": "cancel-synth-001", "orderId": "order-synth-003", "reason": "Example synthetic customer changed mind", "at": "2026-06-01T11:36:00Z" }
+  ],
+  "offlineReconnectScenario": {
+    "id": "offline-synth-001",
+    "description": "Example synthetic scenario: KDS station loses connectivity for 90 seconds mid-rush and reconnects, replaying any missed order updates without duplicating completed items.",
+    "disconnectedAt": "2026-06-01T11:30:00Z",
+    "reconnectedAt": "2026-06-01T11:31:30Z",
+    "affectedStationId": "station-synth-smoker",
+    "replayedUpdateIds": ["update-synth-002"]
+  }
+}
